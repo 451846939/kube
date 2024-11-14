@@ -7,7 +7,7 @@
 //! The [`Config`] has several constructors plus logic to infer environment.
 //!
 //! Unless you have issues, prefer using [`Config::infer`], and pass it to a [`Client`][crate::Client].
-use std::{path::PathBuf, time::Duration};
+use std::{env, path::PathBuf, time::Duration};
 
 use http::{HeaderName, HeaderValue};
 use thiserror::Error;
@@ -161,6 +161,19 @@ pub struct Config {
     pub headers: Vec<(HeaderName, HeaderValue)>,
 }
 
+/// Helper function to get an optional timeout from the environment.
+/// Returns `None` if the variable is not set or cannot be parsed.
+fn get_timeout_from_env(var: &str) -> Option<Duration> {
+    env::var(var).ok().and_then(|val| {
+        if val.to_lowercase() == "none" {
+            None
+        } else {
+            val.parse::<u64>().ok().map(Duration::from_secs)
+        }
+    })
+}
+
+
 impl Config {
     /// Construct a new config where only the `cluster_url` is set by the user.
     /// and everything else receives a default value.
@@ -172,9 +185,9 @@ impl Config {
             cluster_url,
             default_namespace: String::from("default"),
             root_cert: None,
-            connect_timeout: Some(DEFAULT_CONNECT_TIMEOUT),
-            read_timeout: Some(DEFAULT_READ_TIMEOUT),
-            write_timeout: Some(DEFAULT_WRITE_TIMEOUT),
+            connect_timeout: get_timeout_from_env("CONNECT_TIMEOUT").or(Some(DEFAULT_CONNECT_TIMEOUT)),
+            read_timeout: get_timeout_from_env("READ_TIMEOUT").or(Some(DEFAULT_READ_TIMEOUT)),
+            write_timeout: get_timeout_from_env("WRITE_TIMEOUT").or(Some(DEFAULT_WRITE_TIMEOUT)),
             accept_invalid_certs: false,
             auth_info: AuthInfo::default(),
             proxy_url: None,
@@ -251,9 +264,9 @@ impl Config {
             cluster_url,
             default_namespace,
             root_cert: Some(root_cert),
-            connect_timeout: Some(DEFAULT_CONNECT_TIMEOUT),
-            read_timeout: Some(DEFAULT_READ_TIMEOUT),
-            write_timeout: Some(DEFAULT_WRITE_TIMEOUT),
+            connect_timeout: get_timeout_from_env("CONNECT_TIMEOUT").or(Some(DEFAULT_CONNECT_TIMEOUT)),
+            read_timeout: get_timeout_from_env("READ_TIMEOUT").or(Some(DEFAULT_READ_TIMEOUT)),
+            write_timeout: get_timeout_from_env("WRITE_TIMEOUT").or(Some(DEFAULT_WRITE_TIMEOUT)),
             accept_invalid_certs: false,
             auth_info: AuthInfo {
                 token_file: Some(incluster_config::token_file()),
@@ -312,9 +325,9 @@ impl Config {
             cluster_url,
             default_namespace,
             root_cert,
-            connect_timeout: Some(DEFAULT_CONNECT_TIMEOUT),
-            read_timeout: Some(DEFAULT_READ_TIMEOUT),
-            write_timeout: Some(DEFAULT_WRITE_TIMEOUT),
+            connect_timeout: get_timeout_from_env("CONNECT_TIMEOUT").or(Some(DEFAULT_CONNECT_TIMEOUT)),
+            read_timeout: get_timeout_from_env("READ_TIMEOUT").or(Some(DEFAULT_READ_TIMEOUT)),
+            write_timeout: get_timeout_from_env("WRITE_TIMEOUT").or(Some(DEFAULT_WRITE_TIMEOUT)),
             accept_invalid_certs,
             proxy_url: loader.proxy_url()?,
             auth_info: loader.user,
